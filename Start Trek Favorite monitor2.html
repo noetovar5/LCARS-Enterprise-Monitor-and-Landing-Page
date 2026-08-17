@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LCARS Website Monitoring Command Center</title>
+  <style>
+    :root {
+      --bg: #050509;
+      --panel: #11111d;
+      --orange: #ff9c33;
+      --amber: #ffc266;
+      --purple: #9b7bff;
+      --blue: #66ccff;
+      --red: #ff4b5c;
+      --green: #45ff9a;
+      --cream: #ffd9a3;
+      --muted: #8f91a6;
+      --white: #f6f7ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(155,123,255,.18), transparent 25%),
+        radial-gradient(circle at 80% 25%, rgba(255,156,51,.14), transparent 30%),
+        linear-gradient(135deg, #020206 0%, #090915 55%, #030306 100%);
+      color: var(--white);
+      font-family: Arial, Helvetica, sans-serif;
+      overflow-x: hidden;
+    }
+
+    .dashboard {
+      width: min(1500px, 96vw);
+      margin: 0 auto;
+      padding: 24px 0 40px;
+    }
+
+    .lcars-top {
+      display: grid;
+      grid-template-columns: 330px 1fr 240px;
+      gap: 16px;
+      align-items: stretch;
+      margin-bottom: 20px;
+    }
+
+    .top-left {
+      display: grid;
+      grid-template-columns: 90px 1fr;
+      gap: 8px;
+      min-height: 150px;
+    }
+
+    .elbow {
+      background: var(--orange);
+      border-radius: 48px 0 0 48px;
+      position: relative;
+      box-shadow: 0 0 28px rgba(255,156,51,.24);
+    }
+
+    .elbow:after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 48%;
+      width: 50%;
+      height: 18px;
+      background: var(--bg);
+      border-radius: 16px 0 0 16px;
+    }
+
+    .color-stack {
+      display: grid;
+      grid-template-rows: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .color-panel {
+      border-radius: 0 28px 28px 0;
+      position: relative;
+      overflow: hidden;
+      box-shadow: inset 0 0 16px rgba(0,0,0,.35), 0 0 20px rgba(255,255,255,.05);
+    }
+
+    .color-panel:nth-child(1) { background: linear-gradient(90deg, #ff9c33, #ffc266); }
+    .color-panel:nth-child(2) { background: linear-gradient(90deg, #9b7bff, #c2a8ff); }
+    .color-panel:nth-child(3) { background: linear-gradient(90deg, #66ccff, #9de5ff); }
+
+    .color-panel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.42), transparent);
+      transform: translateX(-120%);
+      animation: panelScan 3.4s infinite ease-in-out;
+    }
+
+    .color-panel:nth-child(2)::before { animation-delay: .45s; }
+    .color-panel:nth-child(3)::before { animation-delay: .9s; }
+
+    .color-panel::after {
+      content: '';
+      position: absolute;
+      width: 22px;
+      height: 100%;
+      top: 0;
+      left: -30px;
+      background: rgba(0,0,0,.18);
+      animation: dataPulse 5.5s infinite linear;
+    }
+
+    @keyframes panelScan {
+      0% { transform: translateX(-120%); opacity: 0; }
+      20% { opacity: .85; }
+      55% { transform: translateX(120%); opacity: .35; }
+      100% { transform: translateX(120%); opacity: 0; }
+    }
+
+    @keyframes dataPulse {
+      0% { left: -40px; }
+      100% { left: 120%; }
+    }
+
+    .header-panel {
+      border-radius: 0 42px 42px 0;
+      background: linear-gradient(90deg, rgba(255,156,51,.92), rgba(255,194,102,.92));
+      color: #07070a;
+      padding: 28px 34px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      box-shadow: 0 0 34px rgba(255,156,51,.16);
+    }
+
+    .header-panel h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 4rem);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      line-height: .95;
+    }
+
+    .header-panel p {
+      margin: 12px 0 0;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .stardate {
+      border-radius: 34px;
+      background: linear-gradient(180deg, #161627, #07070d);
+      border: 2px solid rgba(255,255,255,.08);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      box-shadow: inset 0 0 24px rgba(102,204,255,.08);
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: .8rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 7px;
+    }
+
+    .clock {
+      font-size: 1.65rem;
+      color: var(--blue);
+      font-weight: bold;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr 320px;
+      gap: 18px;
+    }
+
+    .side-panel, .monitor-area, .right-panel {
+      background: rgba(10,10,20,.86);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 32px;
+      box-shadow: inset 0 0 30px rgba(255,255,255,.025), 0 0 34px rgba(0,0,0,.3);
+    }
+
+    .side-panel, .right-panel { padding: 20px; }
+    .monitor-area { padding: 24px; }
+
+    .section-title {
+      display: inline-block;
+      padding: 10px 18px;
+      border-radius: 22px;
+      background: var(--purple);
+      color: #060608;
+      text-transform: uppercase;
+      font-weight: bold;
+      letter-spacing: 1.5px;
+      margin-bottom: 18px;
+    }
+
+    .nav-button {
+      display: block;
+      text-decoration: none;
+      color: #060608;
+      background: var(--orange);
+      border-radius: 22px 4px 4px 22px;
+      padding: 13px 16px;
+      margin: 10px 0;
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transition: transform .2s, filter .2s;
+    }
+
+    .nav-button:hover { transform: translateX(5px); filter: brightness(1.18); }
+    .nav-button.alt { background: var(--cream); }
+    .nav-button.blue { background: var(--blue); }
+    .nav-button.purple { background: var(--purple); }
+
+
+    .mini-sensor-array {
+      height: 118px;
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at 20% 50%, rgba(69,255,154,.18), transparent 24%),
+        repeating-linear-gradient(90deg, rgba(102,204,255,.08) 0 2px, transparent 2px 14px),
+        linear-gradient(180deg, rgba(102,204,255,.10), rgba(155,123,255,.05));
+      border: 1px solid rgba(102,204,255,.22);
+      position: relative;
+      overflow: hidden;
+      margin: 14px 0 18px;
+      box-shadow: inset 0 0 22px rgba(102,204,255,.08), 0 0 18px rgba(69,255,154,.08);
+    }
+
+    .mini-sensor-array::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 92px;
+      height: 92px;
+      border-radius: 50%;
+      border: 2px dashed rgba(69,255,154,.45);
+      transform: translate(-50%, -50%);
+      animation: miniSensorRotate 8s linear infinite;
+    }
+
+    .mini-sensor-array::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -35%;
+      width: 35%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(69,255,154,.50), transparent);
+      animation: miniSensorSweep 2.8s linear infinite;
+    }
+
+    .mini-sensor-core {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 18px rgba(69,255,154,.75);
+      transform: translate(-50%, -50%);
+      animation: miniSensorPulse 1.5s ease-in-out infinite;
+    }
+
+    .mini-sensor-label {
+      position: absolute;
+      left: 14px;
+      bottom: 10px;
+      color: var(--blue);
+      font-size: .68rem;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      font-weight: bold;
+    }
+
+    @keyframes miniSensorRotate {
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    @keyframes miniSensorSweep {
+      to { left: 125%; }
+    }
+
+    @keyframes miniSensorPulse {
+      0%, 100% { opacity: .65; transform: translate(-50%, -50%) scale(.9); }
+      50% { opacity: 1; transform: translate(-50%, -50%) scale(1.25); }
+    }
+
+    .status-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .summary-card {
+      border-radius: 24px;
+      padding: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.025));
+      border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .summary-card strong {
+      display: block;
+      font-size: 1.7rem;
+      margin-top: 7px;
+      color: var(--amber);
+    }
+
+    .server-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(260px, 1fr));
+      gap: 18px;
+    }
+
+    .server-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 32px;
+      background: #11111d;
+      border: 2px solid rgba(255,255,255,.08);
+      min-height: 315px;
+      padding: 22px;
+    }
+
+    .server-card::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      background: linear-gradient(120deg, transparent 0%, rgba(102,204,255,.08) 45%, transparent 60%);
+      transform: translateX(-120%);
+      animation: hullSweep 4s infinite linear;
+      pointer-events: none;
+    }
+
+    @keyframes hullSweep {
+      to { transform: translateX(120%); }
+    }
+
+    .server-name {
+      font-size: 1.45rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 6px;
+    }
+
+    .server-ip {
+      color: var(--muted);
+      margin-bottom: 20px;
+      font-family: Consolas, monospace;
+    }
+
+    .status-orb {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      margin: 10px auto 18px;
+      background: radial-gradient(circle, var(--muted), #222232 55%, #07070d 70%);
+      box-shadow: 0 0 26px rgba(255,255,255,.08);
+      position: relative;
+    }
+
+    .status-orb::after {
+      content: '';
+      position: absolute;
+      inset: 12px;
+      border-radius: 50%;
+      border: 2px dashed rgba(255,255,255,.2);
+      animation: rotate 10s linear infinite;
+    }
+
+    @keyframes rotate { to { transform: rotate(360deg); } }
+
+    .online .status-orb {
+      background: radial-gradient(circle, #d9ffe9, var(--green) 30%, #076c3a 62%, #061209 72%);
+      box-shadow: 0 0 36px rgba(69,255,154,.55);
+      animation: onlinePulse 1.8s infinite ease-in-out;
+    }
+
+    .offline .status-orb {
+      background: radial-gradient(circle, #ffe1e4, var(--red) 30%, #831720 62%, #170207 72%);
+      box-shadow: 0 0 42px rgba(255,75,92,.75);
+      animation: redAlert 1s infinite ease-in-out;
+    }
+
+    .checking .status-orb {
+      background: radial-gradient(circle, #ecf8ff, var(--blue) 30%, #0c4c68 62%, #050b12 72%);
+      box-shadow: 0 0 34px rgba(102,204,255,.52);
+      animation: onlinePulse 1.4s infinite ease-in-out;
+    }
+
+    @keyframes onlinePulse {
+      0%, 100% { transform: scale(1); opacity: .95; }
+      50% { transform: scale(1.045); opacity: 1; }
+    }
+
+    @keyframes redAlert {
+      0%, 100% { transform: scale(1); filter: brightness(1); }
+      50% { transform: scale(1.06); filter: brightness(1.35); }
+    }
+
+    .status-text {
+      text-align: center;
+      font-size: 1.6rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    .online .status-text { color: var(--green); }
+    .offline .status-text { color: var(--red); }
+    .checking .status-text { color: var(--blue); }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .metric {
+      background: rgba(255,255,255,.055);
+      border-radius: 18px;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,.07);
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 5px;
+    }
+
+    .metric b {
+      color: var(--cream);
+      font-size: 1rem;
+      word-break: break-word;
+    }
+
+    .scanner {
+      height: 180px;
+      border-radius: 28px;
+      background:
+        repeating-linear-gradient(0deg, rgba(102,204,255,.05) 0 2px, transparent 2px 12px),
+        linear-gradient(180deg, rgba(102,204,255,.08), rgba(155,123,255,.04));
+      border: 1px solid rgba(102,204,255,.16);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .scanner::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 34px;
+      background: linear-gradient(180deg, transparent, rgba(69,255,154,.35), transparent);
+      animation: scanLine 3s infinite ease-in-out;
+    }
+
+    @keyframes scanLine {
+      0% { top: -40px; }
+      100% { top: 190px; }
+    }
+
+    .log {
+      background: #07070d;
+      border-radius: 22px;
+      padding: 14px;
+      min-height: 160px;
+      font-family: Consolas, monospace;
+      color: var(--green);
+      font-size: .88rem;
+      border: 1px solid rgba(255,255,255,.08);
+      overflow: hidden;
+    }
+
+    .log-line { margin-bottom: 8px; opacity: .9; }
+
+    .control-button {
+      width: 100%;
+      border: 0;
+      border-radius: 24px;
+      background: var(--amber);
+      color: #08080d;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 14px;
+      cursor: pointer;
+      margin: 8px 0 16px;
+      font-size: .95rem;
+    }
+
+    .note {
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: .95rem;
+    }
+
+    .footer {
+      margin-top: 22px;
+      padding: 18px 24px;
+      border-radius: 28px;
+      background: linear-gradient(90deg, var(--orange), var(--purple), var(--blue));
+      color: #050509;
+      font-weight: bold;
+      text-align: center;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    body.red-mode .header-panel,
+    body.red-mode .footer {
+      animation: emergencyHeader 1s infinite ease-in-out;
+    }
+
+    @keyframes emergencyHeader {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.4) saturate(1.2); }
+    }
+
+    @media (max-width: 1050px) {
+      .lcars-top, .main-grid { grid-template-columns: 1fr; }
+      .top-left { min-height: 120px; }
+      .server-grid { grid-template-columns: 1fr; }
+      .status-summary { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="dashboard">
+    <section class="lcars-top">
+      <div class="top-left">
+        <div class="elbow"></div>
+        <div class="color-stack">
+          <div class="color-panel"></div>
+          <div class="color-panel"></div>
+          <div class="color-panel"></div>
+        </div>
+      </div>
+
+      <header class="header-panel">
+        <h1>Tovar Tech Monitor</h1>
+        <p>LCARS Enterprise Command Center</p>
+      </header>
+
+      <aside class="stardate">
+        <div class="label">Current Time</div>
+        <div class="clock" id="clock">--:--:--</div>
+        <div class="label" style="margin-top:14px;">System Mode</div>
+        <div id="systemMode" style="color:var(--green);font-weight:bold;">NORMAL OPERATIONS</div>
+      </aside>
+    </section>
+
+    <section class="main-grid">
+      <aside class="side-panel">
+        <div class="section-title">Controls</div>
+        <button class="control-button" onclick="runChecks()">Run Manual Scan</button>
+        <a class="nav-button" href="http://149.28.52.80" target="_blank">Open Site 01</a>
+        <a class="nav-button purple" href="http://149.28.255.229" target="_blank">Open Site 02</a>
+        <a class="nav-button blue" href="https://books.tovartech.org" target="_blank">Book Store</a>
+        <a class="nav-button alt" href="https://noetovar.com" target="_blank">NoeTovar.com</a>
+
+        <div class="mini-sensor-array" aria-label="Secondary Sensor Array">
+          <div class="mini-sensor-core"></div>
+          <div class="mini-sensor-label">Secondary Sensor Array</div>
+        </div>
+        <p class="note">This version checks whether each site responds through the browser. For true server ping, uptime history, and email alerts, the next version can use a small Linux backend service.</p>
+      </aside>
+
+      <section class="monitor-area">
+        <div class="section-title">Live Server Status</div>
+        <div class="status-summary">
+          <div class="summary-card"><div class="label">Online</div><strong id="onlineCount">0</strong></div>
+          <div class="summary-card"><div class="label">Offline</div><strong id="offlineCount">0</strong></div>
+          <div class="summary-card"><div class="label">Refresh</div><strong>30s</strong></div>
+        </div>
+
+        <div class="server-grid">
+          <article class="server-card checking" id="server1">
+            <div class="server-name">Cloud Website 01</div>
+            <div class="server-ip">149.28.52.80</div>
+            <div class="status-orb"></div>
+            <div class="status-text" id="status1">Checking</div>
+            <div class="metrics">
+              <div class="metric"><span>Protocol</span><b>HTTP</b></div>
+              <div class="metric"><span>Response</span><b id="response1">-- ms</b></div>
+              <div class="metric"><span>Last Scan</span><b id="last1">--</b></div>
+              <div class="metric"><span>Target</span><b>http://149.28.52.80</b></div>
+            </div>
+          </article>
+
+          <article class="server-card checking" id="server2">
+            <div class="server-name">Cloud Website 02</div>
+            <div class="server-ip">149.28.255.229</div>
+            <div class="status-orb"></div>
+            <div class="status-text" id="status2">Checking</div>
+            <div class="metrics">
+              <div class="metric"><span>Protocol</span><b>HTTP</b></div>
+              <div class="metric"><span>Response</span><b id="response2">-- ms</b></div>
+              <div class="metric"><span>Last Scan</span><b id="last2">--</b></div>
+              <div class="metric"><span>Target</span><b>http://149.28.255.229</b></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <aside class="right-panel">
+        <div class="section-title">Sensor Array</div>
+        <div class="scanner"></div>
+        <div class="section-title">Event Log</div>
+        <div class="log" id="log"></div>
+      </aside>
+    </section>
+
+    <footer class="footer">Noe Tovar Web Applications | TovarTech LLC. All Rights Reserved 2026</footer>
+  </main>
+
+  <script>
+    const targets = [
+      { id: 1, name: 'Cloud Website 01', url: 'http://149.28.52.80' },
+      { id: 2, name: 'Cloud Website 02', url: 'http://149.28.255.229' }
+    ];
+
+    const state = { 1: 'checking', 2: 'checking' };
+
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clock').textContent = now.toLocaleTimeString([], {
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+    }
+
+    function log(message) {
+      const logBox = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      line.textContent = `[${time}] ${message}`;
+      logBox.prepend(line);
+      while (logBox.children.length > 8) logBox.removeChild(logBox.lastChild);
+    }
+
+    async function checkTarget(target) {
+      const card = document.getElementById(`server${target.id}`);
+      const status = document.getElementById(`status${target.id}`);
+      const response = document.getElementById(`response${target.id}`);
+      const last = document.getElementById(`last${target.id}`);
+
+      card.className = 'server-card checking';
+      status.textContent = 'Checking';
+      response.textContent = '-- ms';
+
+      const start = performance.now();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 7000);
+
+      try {
+        await fetch(target.url, {
+          method: 'GET',
+          mode: 'no-cors',
+          cache: 'no-store',
+          signal: controller.signal
+        });
+
+        clearTimeout(timeout);
+        const elapsed = Math.round(performance.now() - start);
+        card.className = 'server-card online';
+        status.textContent = 'Online';
+        response.textContent = `${elapsed} ms`;
+        last.textContent = new Date().toLocaleTimeString();
+        state[target.id] = 'online';
+        log(`${target.name} responded successfully in ${elapsed} ms.`);
+      } catch (error) {
+        clearTimeout(timeout);
+        card.className = 'server-card offline';
+        status.textContent = 'Offline';
+        response.textContent = 'No response';
+        last.textContent = new Date().toLocaleTimeString();
+        state[target.id] = 'offline';
+        log(`RED ALERT: ${target.name} did not respond.`);
+      }
+    }
+
+    async function runChecks() {
+      log('Initiating website status scan.');
+      await Promise.all(targets.map(checkTarget));
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const online = Object.values(state).filter(x => x === 'online').length;
+      const offline = Object.values(state).filter(x => x === 'offline').length;
+      document.getElementById('onlineCount').textContent = online;
+      document.getElementById('offlineCount').textContent = offline;
+
+      const mode = document.getElementById('systemMode');
+      if (offline > 0) {
+        document.body.classList.add('red-mode');
+        mode.textContent = 'RED ALERT';
+        mode.style.color = 'var(--red)';
+      } else {
+        document.body.classList.remove('red-mode');
+        mode.textContent = 'NORMAL OPERATIONS';
+        mode.style.color = 'var(--green)';
+      }
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+    runChecks();
+    setInterval(runChecks, 30000);
+  </script>
+</body>
+</html>
